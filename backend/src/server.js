@@ -14,13 +14,16 @@ const cacheRoutes = require('./routes/cacheRoutes');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Create required directories if they don't exist
-const directories = [
-  process.env.UPLOAD_DIR || './uploads',
-  process.env.OUTPUT_DIR || './outputs',
-  process.env.CACHE_DIR || './cache',
-  './logs'
-];
+// --- Create required directories if they don't exist ---
+const UPLOAD_DIR = process.env.VERCEL
+  ? '/tmp/uploads'
+  : path.join(__dirname, process.env.UPLOAD_DIR || '../uploads');
+
+const OUTPUT_DIR = path.join(__dirname, process.env.OUTPUT_DIR || '../outputs');
+const CACHE_DIR = path.join(__dirname, process.env.CACHE_DIR || '../cache');
+const LOG_DIR = path.join(__dirname, './logs');
+
+const directories = [UPLOAD_DIR, OUTPUT_DIR, CACHE_DIR, LOG_DIR];
 
 directories.forEach(dir => {
   if (!fs.existsSync(dir)) {
@@ -29,22 +32,21 @@ directories.forEach(dir => {
   }
 });
 
-// Middleware
+// Optional: expose UPLOAD_DIR globally for routes
+app.locals.UPLOAD_DIR = UPLOAD_DIR;
+console.log(`Upload directory set to: ${UPLOAD_DIR}`);
+
+// --- Middleware ---
 app.use(helmet()); // Security headers
 app.use(morgan('dev')); // Request logging
-// CORS - Allow all origins for development
-// CORS Configuration - Vercel compatible
+
+// CORS configuration - Vercel compatible
 const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (like Vercel internal requests)
-    if (!origin) return callback(null, true);
+    if (!origin) return callback(null, true); // Allow requests with no origin (Vercel internal)
+    if (process.env.VERCEL) return callback(null, true); // Allow all on Vercel
 
-    // In production on Vercel, allow same domain
-    if (process.env.VERCEL) {
-      return callback(null, true);
-    }
-
-    // In development, allow localhost
+    // Development allowed origins
     const allowedOrigins = [
       'http://localhost:3000',
       'http://127.0.0.1:3000',
@@ -52,10 +54,10 @@ const corsOptions = {
       'http://127.0.0.1:5000'
     ];
 
-    if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
+    if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
-      callback(null, true); // Allow all in development
+      callback(null, true); // Allow all for development
     }
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -67,17 +69,16 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 
-
-// Explicitly handle OPTIONS requests
-app.options('*', cors(corsOptions));
+// Body parsing
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Serve static files (generated PDFs, cached images)
-app.use('/outputs', express.static(path.join(__dirname, '..', process.env.OUTPUT_DIR || 'outputs')));
-app.use('/cache', express.static(path.join(__dirname, '..', process.env.CACHE_DIR || 'cache')));
+// Serve static files
+app.use('/outputs', express.static(OUTPUT_DIR));
+app.use('/cache', express.static(CACHE_DIR));
+app.use('/uploads', express.static(UPLOAD_DIR)); // Optional: serve uploaded files
 
-// Health check endpoint
+// --- Health check endpoint ---
 app.get('/health', (req, res) => {
   res.json({
     status: 'healthy',
@@ -90,11 +91,11 @@ app.get('/health', (req, res) => {
   });
 });
 
-// API Routes
+// --- API Routes ---
 app.use('/api/menu', menuRoutes);
 app.use('/api/cache', cacheRoutes);
 
-// Error handling middleware
+// --- Error handling middleware ---
 app.use((err, req, res, next) => {
   console.error('Error:', err);
 
@@ -107,7 +108,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-// 404 handler
+// --- 404 handler ---
 app.use((req, res) => {
   res.status(404).json({
     error: {
@@ -117,7 +118,7 @@ app.use((req, res) => {
   });
 });
 
-// Start server
+// --- Start server ---
 app.listen(PORT, () => {
   console.log('\n🚀 Elderly Care Menu Generator API');
   console.log('=====================================');
@@ -132,7 +133,7 @@ app.listen(PORT, () => {
   console.log('\n✓ Ready to generate menus!\n');
 });
 
-// Graceful shutdown
+// --- Graceful shutdown ---
 process.on('SIGTERM', () => {
   console.log('SIGTERM received, shutting down gracefully...');
   process.exit(0);
@@ -142,13 +143,10 @@ process.on('SIGINT', () => {
   console.log('\nSIGINT received, shutting down gracefully...');
   process.exit(0);
 });
-// ... existing code ...
 
-module.exports = app;
-
-// For Vercel serverless
+// --- Export app for Vercel serverless ---
 if (process.env.VERCEL) {
   module.exports = app;
+} else {
+  module.exports = app;
 }
-
-module.exports = app;
