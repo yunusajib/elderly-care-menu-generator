@@ -100,9 +100,9 @@ app.get('/health', (req, res) => {
 });
 
 // --- API Routes ---
-// Correct route mounting: /api/menu and /api/cache
-app.use('/api/menu', menuRoutes);
-app.use('/api/cache', cacheRoutes);
+// ✅ FIXED: Mount all API routes under /api
+app.use('/api', menuRoutes);
+app.use('/api', cacheRoutes);
 
 // --- Error handling middleware ---
 app.use((err, req, res, next) => {
@@ -121,7 +121,8 @@ app.use((req, res) => {
   res.status(404).json({
     error: {
       message: 'Route not found',
-      status: 404
+      status: 404,
+      requestedPath: req.path
     }
   });
 });
