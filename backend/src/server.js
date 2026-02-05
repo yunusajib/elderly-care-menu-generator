@@ -54,37 +54,25 @@ console.log('CACHE_DIR:', CACHE_DIR);
 console.log('LOG_DIR:', LOG_DIR);
 
 // --- Middleware ---
-app.use(helmet()); // Security headers
-app.use(morgan('dev')); // Request logging
-
-// CORS configuration - Vercel compatible
-const corsOptions = {
-  origin: function (origin, callback) {
-    if (!origin) return callback(null, true); // Allow requests with no origin (Vercel internal)
-    if (isVercel) return callback(null, true); // Allow all on Vercel
-
-    // Development allowed origins
+app.use(helmet());
+app.use(morgan('dev'));
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || isVercel) return callback(null, true);
     const allowedOrigins = [
       'http://localhost:3000',
       'http://127.0.0.1:3000',
       'http://localhost:5000',
       'http://127.0.0.1:5000'
     ];
-
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(null, true); // Allow all for development
-    }
+    callback(null, true);
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
   optionsSuccessStatus: 204
-};
-
-app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
+}));
+app.options('*', cors());
 
 // Body parsing
 app.use(express.json({ limit: '50mb' }));
@@ -93,7 +81,10 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 // Serve static files
 app.use('/outputs', express.static(OUTPUT_DIR));
 app.use('/cache', express.static(CACHE_DIR));
-app.use('/uploads', express.static(UPLOAD_DIR)); // Optional: serve uploaded files
+app.use('/uploads', express.static(UPLOAD_DIR));
+
+// --- Favicon handler to avoid 404 ---
+app.get('/favicon.ico', (req, res) => res.status(204));
 
 // --- Health check endpoint ---
 app.get('/health', (req, res) => {
@@ -109,13 +100,13 @@ app.get('/health', (req, res) => {
 });
 
 // --- API Routes ---
+// Correct route mounting: /api/menu and /api/cache
 app.use('/api/menu', menuRoutes);
 app.use('/api/cache', cacheRoutes);
 
 // --- Error handling middleware ---
 app.use((err, req, res, next) => {
   console.error('Error:', err);
-
   res.status(err.status || 500).json({
     error: {
       message: err.message || 'Internal server error',
@@ -143,10 +134,10 @@ app.listen(PORT, () => {
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
   console.log('\n📋 API Endpoints:');
-  console.log(`  POST   http://localhost:${PORT}/api/menu/extract`);
-  console.log(`  POST   http://localhost:${PORT}/api/menu/generate`);
-  console.log(`  GET    http://localhost:${PORT}/api/cache/stats`);
-  console.log(`  GET    http://localhost:${PORT}/health`);
+  console.log(`  POST   /api/menu/extract`);
+  console.log(`  POST   /api/menu/generate`);
+  console.log(`  GET    /api/cache/stats`);
+  console.log(`  GET    /health`);
   console.log('\n✓ Ready to generate menus!\n');
 });
 
