@@ -1,8 +1,9 @@
 const fs = require('fs').promises;
 const fsSync = require('fs');
 const path = require('path');
+// ✅ Import centralized paths
+const { CACHE_DIR } = require('../config/paths');
 
-const CACHE_DIR = process.env.CACHE_DIR || './cache';
 const CACHE_INDEX_FILE = path.join(CACHE_DIR, 'cache-index.json');
 
 /**
@@ -10,6 +11,11 @@ const CACHE_INDEX_FILE = path.join(CACHE_DIR, 'cache-index.json');
  */
 async function initializeCacheIndex() {
   try {
+    // ✅ Ensure cache directory exists
+    if (!fsSync.existsSync(CACHE_DIR)) {
+      fsSync.mkdirSync(CACHE_DIR, { recursive: true });
+    }
+
     await fs.access(CACHE_INDEX_FILE);
   } catch {
     // Create empty index
@@ -42,21 +48,21 @@ async function saveCacheIndex(index) {
 async function getFromCache(cacheKey) {
   await initializeCacheIndex();
   const index = await loadCacheIndex();
-  
+
   if (index[cacheKey]) {
     const entry = index[cacheKey];
-    
+
     // Check if file still exists
     const imagePath = path.join(CACHE_DIR, `${cacheKey}.png`);
     try {
       await fs.access(imagePath);
-      
+
       // Update usage count and last used
       entry.usageCount = (entry.usageCount || 0) + 1;
       entry.lastUsed = new Date().toISOString();
       index[cacheKey] = entry;
       await saveCacheIndex(index);
-      
+
       return {
         ...entry,
         localPath: imagePath,
@@ -69,7 +75,7 @@ async function getFromCache(cacheKey) {
       return null;
     }
   }
-  
+
   return null;
 }
 
@@ -79,7 +85,7 @@ async function getFromCache(cacheKey) {
 async function saveToCache(cacheKey, imageData) {
   await initializeCacheIndex();
   const index = await loadCacheIndex();
-  
+
   index[cacheKey] = {
     mealDescription: imageData.mealDescription,
     mealType: imageData.mealType,
@@ -90,7 +96,7 @@ async function saveToCache(cacheKey, imageData) {
     url: imageData.url,
     localPath: imageData.localPath
   };
-  
+
   await saveCacheIndex(index);
 }
 
@@ -100,27 +106,27 @@ async function saveToCache(cacheKey, imageData) {
 async function deleteFromCache(cacheKey) {
   await initializeCacheIndex();
   const index = await loadCacheIndex();
-  
+
   if (index[cacheKey]) {
     // Delete image files
     const imagePath = path.join(CACHE_DIR, `${cacheKey}.png`);
     const metadataPath = path.join(CACHE_DIR, `${cacheKey}.json`);
-    
+
     try {
       await fs.unlink(imagePath);
-    } catch {}
-    
+    } catch { }
+
     try {
       await fs.unlink(metadataPath);
-    } catch {}
-    
+    } catch { }
+
     // Remove from index
     delete index[cacheKey];
     await saveCacheIndex(index);
-    
+
     return { found: true, deleted: true };
   }
-  
+
   return { found: false, deleted: false };
 }
 
@@ -130,12 +136,12 @@ async function deleteFromCache(cacheKey) {
 async function getStats() {
   await initializeCacheIndex();
   const index = await loadCacheIndex();
-  
+
   const entries = Object.values(index);
   const totalImages = entries.length;
   const totalUsage = entries.reduce((sum, e) => sum + (e.usageCount || 1), 0);
   const avgUsagePerImage = totalImages > 0 ? (totalUsage / totalImages).toFixed(2) : 0;
-  
+
   // Calculate cache size
   let totalSize = 0;
   try {
@@ -147,10 +153,10 @@ async function getStats() {
         totalSize += stats.size;
       }
     }
-  } catch {}
-  
+  } catch { }
+
   const cacheSizeMB = (totalSize / (1024 * 1024)).toFixed(2);
-  
+
   // Most used images
   const mostUsed = entries
     .sort((a, b) => (b.usageCount || 1) - (a.usageCount || 1))
@@ -160,7 +166,7 @@ async function getStats() {
       usageCount: e.usageCount,
       lastUsed: e.lastUsed
     }));
-  
+
   return {
     totalImages: totalImages,
     totalUsage: totalUsage,
@@ -176,7 +182,7 @@ async function getStats() {
 async function listCached() {
   await initializeCacheIndex();
   const index = await loadCacheIndex();
-  
+
   return Object.entries(index).map(([key, data]) => ({
     cacheKey: key,
     mealDescription: data.mealDescription,
@@ -193,15 +199,15 @@ async function listCached() {
 async function clearCache() {
   await initializeCacheIndex();
   const index = await loadCacheIndex();
-  
+
   const keys = Object.keys(index);
   let deletedCount = 0;
-  
+
   for (const key of keys) {
     const result = await deleteFromCache(key);
     if (result.deleted) deletedCount++;
   }
-  
+
   return { deletedCount: deletedCount };
 }
 

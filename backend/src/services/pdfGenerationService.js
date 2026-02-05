@@ -11,16 +11,15 @@ const fsSync = require('fs');      // sync fs
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 
+// ✅ Import centralized paths
+const { OUTPUT_DIR } = require('../config/paths');
+
 // ===============================
 // Paths & constants
 // ===============================
-const OUTPUT_DIR = process.env.VERCEL
-  ? '/tmp/outputs'
-  : (process.env.OUTPUT_DIR || './outputs');
-
 const TEMPLATE_PATH = path.join(__dirname, '../templates/menuTemplate.html');
 
-// Ensure output directory exists
+// ✅ Ensure output directory exists
 if (!fsSync.existsSync(OUTPUT_DIR)) {
   fsSync.mkdirSync(OUTPUT_DIR, { recursive: true });
 }

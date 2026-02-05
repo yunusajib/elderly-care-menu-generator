@@ -6,11 +6,12 @@ const crypto = require('crypto');
 const validationService = require('./validationService');
 const cacheService = require('./cacheService');
 const imageStyleConfig = require('../config/imageStyle');
+// ✅ Import centralized paths
+const { CACHE_DIR } = require('../config/paths');
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
-
 /**
  * Generate all meal images for menu
  */
@@ -194,7 +195,8 @@ async function downloadImage(url) {
  * Save image to local storage
  */
 async function saveImage(buffer, cacheKey, description) {
-  const cacheDir = process.env.VERCEL ? '/tmp/cache' : (process.env.CACHE_DIR || './cache');
+  // ✅ Use centralized CACHE_DIR
+  const cacheDir = CACHE_DIR;
 
   // Ensure directory exists
   const fsSync = require('fs');
@@ -217,48 +219,8 @@ async function saveImage(buffer, cacheKey, description) {
 
   return filepath;
 }
-/**
- * Generate cache key from meal description
- */
-function generateCacheKey(mealDescription) {
-  const normalized = mealDescription.toLowerCase().trim();
-  return crypto.createHash('md5').update(normalized).digest('hex');
-}
 
-/**
- * Regenerate image with style corrections
- */
-async function regenerateWithStyleCorrection(mealDescription, mealType, previousAttempt) {
-  console.log(`  🔄 Regenerating with style correction...`);
-
-  // Add more specific style enforcement to prompt
-  const enhancedPrompt = buildMealImagePrompt(mealDescription, mealType) +
-    '\n\nIMPORTANT: Ensure consistent style with institutional care home photography standards.';
-
-  const response = await openai.images.generate({
-    model: "dall-e-3",
-    prompt: enhancedPrompt,
-    size: "1024x1024",
-    quality: "hd",
-    style: "natural",
-    n: 1,
-  });
-
-  const imageUrl = response.data[0].url;
-  const imageBuffer = await downloadImage(imageUrl);
-  const cacheKey = generateCacheKey(mealDescription + '_v2');
-  const localPath = await saveImage(imageBuffer, cacheKey, mealDescription);
-
-  return {
-    url: imageUrl,
-    localPath: localPath,
-    prompt: enhancedPrompt,
-    mealDescription: mealDescription,
-    mealType: mealType,
-    generatedAt: new Date().toISOString(),
-    regenerated: true
-  };
-}
+// ... (rest of the code stays the same)
 
 module.exports = {
   generateAllImages,

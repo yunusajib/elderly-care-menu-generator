@@ -3,8 +3,10 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
-const path = require('path');
 const fs = require('fs');
+
+// ✅ Import centralized paths
+const { UPLOAD_DIR, OUTPUT_DIR, CACHE_DIR, LOG_DIR } = require('./config/paths');
 
 // Import routes
 const menuRoutes = require('./routes/menuRoutes');
@@ -14,25 +16,7 @@ const cacheRoutes = require('./routes/cacheRoutes');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// --- Vercel-safe directories setup ---
-const isVercel = !!process.env.VERCEL;
-
-const UPLOAD_DIR = isVercel
-  ? '/tmp/uploads'
-  : path.join(__dirname, process.env.UPLOAD_DIR || '../uploads');
-
-const OUTPUT_DIR = isVercel
-  ? '/tmp/outputs'
-  : path.join(__dirname, process.env.OUTPUT_DIR || '../outputs');
-
-const CACHE_DIR = isVercel
-  ? '/tmp/cache'
-  : path.join(__dirname, process.env.CACHE_DIR || '../cache');
-
-const LOG_DIR = isVercel
-  ? '/tmp/logs'
-  : path.join(__dirname, './logs');
-
+// ✅ Create directories
 const directories = [UPLOAD_DIR, OUTPUT_DIR, CACHE_DIR, LOG_DIR];
 
 directories.forEach(dir => {
@@ -58,13 +42,6 @@ app.use(helmet());
 app.use(morgan('dev'));
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || isVercel) return callback(null, true);
-    const allowedOrigins = [
-      'http://localhost:3000',
-      'http://127.0.0.1:3000',
-      'http://localhost:5000',
-      'http://127.0.0.1:5000'
-    ];
     callback(null, true);
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -102,7 +79,6 @@ app.get('/health', (req, res) => {
 // --- API Routes ---
 app.use('/api/menu', menuRoutes);
 app.use('/api/cache', cacheRoutes);
-
 
 // --- Error handling middleware ---
 app.use((err, req, res, next) => {
