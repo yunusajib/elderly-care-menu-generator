@@ -1,3 +1,23 @@
+// At the top, add:
+const chromium = process.env.VERCEL ? require('@sparticuz/chromium') : null;
+const puppeteer = process.env.VERCEL
+  ? require('puppeteer-core')
+  : require('puppeteer');
+
+// In generatePDF function, replace browser launch:
+const browser = await puppeteer.launch(
+  process.env.VERCEL
+    ? {
+      args: chromium.args,
+      defaultViewport: chromium.defaultViewport,
+      executablePath: await chromium.executablePath(),
+      headless: chromium.headless,
+    }
+    : {
+      headless: 'new',
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    }
+);
 const puppeteer = require('puppeteer');
 const fs = require('fs').promises;
 const fsSync = require('fs');
