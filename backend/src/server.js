@@ -100,9 +100,9 @@ app.get('/health', (req, res) => {
 });
 
 // --- API Routes ---
-// ✅ FIXED: Mount all API routes under /api
-app.use('/api', menuRoutes);
-app.use('/api', cacheRoutes);
+app.use('/api/menu', menuRoutes);
+app.use('/api/cache', cacheRoutes);
+
 
 // --- Error handling middleware ---
 app.use((err, req, res, next) => {
