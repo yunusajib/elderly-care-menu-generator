@@ -11,10 +11,12 @@ const imageGenerationService = require('../services/imageGenerationService');
 const pdfGenerationService = require('../services/pdfGenerationService');
 const auditService = require('../services/auditService');
 
-// Configure multer for file uploads
+// ✅ FIXED: Configure multer to use app.locals directories
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, process.env.UPLOAD_DIR || './uploads');
+    // Use the directory set in server.js via app.locals
+    const uploadDir = req.app.locals.UPLOAD_DIR || './uploads';
+    cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
     const uniqueName = `${uuidv4()}${path.extname(file.originalname)}`;
@@ -44,12 +46,14 @@ const upload = multer({
 router.post('/extract', upload.single('menuImage'), async (req, res, next) => {
   try {
     console.log('\n📤 Received menu extraction request');
+    console.log('📁 Upload directory:', req.app.locals.UPLOAD_DIR);
 
     let menuText;
 
     if (req.file) {
       // Image uploaded - use OCR
       console.log('📸 Processing uploaded image with GPT-4 Vision...');
+      console.log('📄 File path:', req.file.path);
       menuText = await ocrService.extractMenuFromImage(req.file.path);
     } else if (req.body.menuText) {
       // Text provided directly
