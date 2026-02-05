@@ -1,25 +1,19 @@
 // ===============================
 // Imports (clean, no duplicates)
 // ===============================
-const chromium = process.env.VERCEL ? require('@sparticuz/chromium') : null;
-const puppeteer = process.env.VERCEL
-  ? require('puppeteer-core')
-  : require('puppeteer');
+const chromium = require('@sparticuz/chromium');
+const puppeteer = require('puppeteer-core');
 
 const fs = require('fs').promises; // async fs
 const fsSync = require('fs');      // sync fs
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
-
 // ✅ Import centralized paths
-const { OUTPUT_DIR } = require('../config/paths');
+const { OUTPUT_DIR, isVercel } = require('../config/paths');
 
-// ===============================
-// Paths & constants
-// ===============================
 const TEMPLATE_PATH = path.join(__dirname, '../templates/menuTemplate.html');
 
-// ✅ Ensure output directory exists
+// Ensure output directory exists
 if (!fsSync.existsSync(OUTPUT_DIR)) {
   fsSync.mkdirSync(OUTPUT_DIR, { recursive: true });
 }
@@ -43,20 +37,17 @@ async function generatePDF(options) {
 
     console.log('🖨️ Generating PDF with Puppeteer...');
 
-    // Launch browser (Vercel vs local)
-    const browser = await puppeteer.launch(
-      process.env.VERCEL
-        ? {
-          args: chromium.args,
-          defaultViewport: chromium.defaultViewport,
-          executablePath: await chromium.executablePath(),
-          headless: chromium.headless,
-        }
-        : {
-          headless: 'new',
-          args: ['--no-sandbox', '--disable-setuid-sandbox'],
-        }
-    );
+    // ✅ FIXED: Better Vercel Chromium configuration
+    const browser = await puppeteer.launch({
+      args: isVercel
+        ? [...chromium.args, '--disable-dev-shm-usage', '--no-sandbox', '--disable-setuid-sandbox']
+        : ['--no-sandbox', '--disable-setuid-sandbox'],
+      defaultViewport: chromium.defaultViewport,
+      executablePath: isVercel
+        ? await chromium.executablePath()
+        : process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium-browser',
+      headless: chromium.headless || 'new',
+    });
 
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: 'networkidle0' });
@@ -230,7 +221,39 @@ function formatMenuDate(dateString) {
 // Default template
 // ===============================
 function getDefaultTemplate() {
-  return `<!DOCTYPE html> ... same template ...`;
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Menu</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; padding: 20px; background: white; }
+    .header { text-align: center; margin-bottom: 30px; }
+    .header h1 { color: #2563eb; font-size: 28px; margin-bottom: 10px; }
+    .header p { color: #666; font-size: 14px; }
+    .section { margin-bottom: 25px; page-break-inside: avoid; }
+    .section-title { background: #2563eb; color: white; padding: 10px 15px; font-size: 18px; font-weight: bold; margin-bottom: 10px; }
+    .section-flex { display: flex; gap: 15px; }
+    .section-image { flex: 0 0 200px; }
+    .section-image img { width: 100%; border-radius: 8px; }
+    .section-content-flex { flex: 1; }
+    .meal-list { list-style: none; padding-left: 20px; }
+    .meal-item { padding: 5px 0; color: #333; }
+    .meal-option { padding: 5px 0; color: #666; font-style: italic; }
+    .meal-item:before { content: "•"; color: #2563eb; font-weight: bold; margin-right: 8px; }
+    .meal-option:before { content: "→"; color: #2563eb; margin-right: 8px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>{{careHomeName}}</h1>
+    <p>{{menuDate}}</p>
+  </div>
+  {{sections}}
+</body>
+</html>`;
 }
 
 // ===============================
