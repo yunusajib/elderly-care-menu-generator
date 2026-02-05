@@ -4,13 +4,8 @@ import { useState } from 'react';
 import axios from 'axios';
 import { Upload, FileText, CheckCircle, AlertCircle, Download, Loader2, Camera, Image } from 'lucide-react';
 
-// const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-const API_URL = process.env.NEXT_PUBLIC_API_URL ||
-  (typeof window !== 'undefined' && window.location.origin) ||
-  'http://localhost:5000';
-console.log('🔗 Using API URL:', API_URL);
-
-
+// ✅ FIXED: Simplified API URL - always uses current domain
+const API_URL = typeof window !== 'undefined' ? window.location.origin : '';
 
 export default function Home() {
   const [step, setStep] = useState(1); // 1: Upload, 2: Review, 3: Generate, 4: Complete
@@ -53,6 +48,7 @@ export default function Home() {
         throw new Error('Please upload an image or paste menu text');
       }
 
+      // ✅ FIXED: Now calls /api/menu/extract correctly
       const response = await axios.post(`${API_URL}/api/menu/extract`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
@@ -63,7 +59,6 @@ export default function Home() {
       setValidation(response.data.validation);
       setStep(2);
     } catch (err) {
-      // FIX: Convert error to string
       const errorMessage = err.response?.data?.error?.message
         || err.response?.data?.error
         || err.message
@@ -90,13 +85,11 @@ export default function Home() {
       setGeneratedMenu(response.data);
       setStep(3);
     } catch (err) {
-      // FIX: Convert error to string
       console.error('Generation error:', err);
 
       let errorMessage;
 
       if (err.response?.data?.error) {
-        // Backend returned structured error
         const backendError = err.response.data.error;
         errorMessage = typeof backendError === 'string'
           ? backendError
