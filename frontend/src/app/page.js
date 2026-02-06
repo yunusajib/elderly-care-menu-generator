@@ -290,21 +290,16 @@ export default function Home() {
 
             {/* Extracted Sections */}
             <div className="space-y-4 mb-6">
-              {Object.entries(generatedMenu.images).map(([key, image]) => (
-                <div key={key} className="border rounded-lg overflow-hidden">
-                  <div className="aspect-square bg-gray-100 flex items-center justify-center">
-                    {image.localPath ? (
-                      <img
-                        src={`${API_URL}${image.localPath.replace('./cache', '/cache')}`}
-                        alt={image.mealDescription}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="text-gray-400 text-xs p-4 text-center">
-                        Image generation failed
-                      </div>
-                    )}
-                  </div>
+              {Object.entries(extractedData.parsedMenu.sections).map(([section, data]) => (
+                <div key={section} className="border border-gray-200 rounded-lg p-4">
+                  <h3 className="font-bold text-lg text-blue-600 mb-2">{section}</h3>
+                  <ul className="space-y-1">
+                    {data.items.map((item, i) => (
+                      <li key={i} className={`text-sm ${item.type === 'option' ? 'italic text-gray-600' : 'text-gray-800'}`}>
+                        {item.type === 'option' ? '→ ' : '• '}{item.text}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               ))}
             </div>
