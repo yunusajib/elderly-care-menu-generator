@@ -11,6 +11,7 @@ const { UPLOAD_DIR, OUTPUT_DIR, CACHE_DIR, LOG_DIR } = require('./config/paths')
 // Import routes
 const menuRoutes = require('./routes/menuRoutes');
 const cacheRoutes = require('./routes/cacheRoutes');
+const fileRoutes = require('./routes/fileRoutes'); // ✅ Add this
 
 // Initialize Express app
 const app = express();
@@ -55,7 +56,7 @@ app.options('*', cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Serve static files
+// Serve static files (works locally, not on Vercel serverless)
 app.use('/outputs', express.static(OUTPUT_DIR));
 app.use('/cache', express.static(CACHE_DIR));
 app.use('/uploads', express.static(UPLOAD_DIR));
@@ -79,6 +80,7 @@ app.get('/health', (req, res) => {
 // --- API Routes ---
 app.use('/api/menu', menuRoutes);
 app.use('/api/cache', cacheRoutes);
+app.use('/api/files', fileRoutes); // ✅ Add this - serves files from /tmp/ on Vercel
 
 // --- Error handling middleware ---
 app.use((err, req, res, next) => {
@@ -114,6 +116,8 @@ app.listen(PORT, () => {
   console.log(`  POST   /api/menu/extract`);
   console.log(`  POST   /api/menu/generate`);
   console.log(`  GET    /api/cache/stats`);
+  console.log(`  GET    /api/files/cache/:filename`);      // ✅ Add this
+  console.log(`  GET    /api/files/outputs/:filename`);    // ✅ Add this
   console.log(`  GET    /health`);
   console.log('\n✓ Ready to generate menus!\n');
 });
