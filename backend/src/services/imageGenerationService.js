@@ -5,6 +5,7 @@ const fsSync = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
+// ✅ Import centralized paths
 const { CACHE_DIR } = require('../config/paths');
 
 const openai = new OpenAI({
@@ -265,7 +266,8 @@ async function saveImage(buffer, cacheKey, description) {
       filename: filename
     }, null, 2));
 
-    return filepath;
+    // ✅ Return web-accessible path instead of filesystem path
+    return `/cache/${filename}`;
 
   } catch (error) {
     throw new Error(`Failed to save image: ${error.message}`);

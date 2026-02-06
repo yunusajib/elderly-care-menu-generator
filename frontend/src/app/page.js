@@ -2,13 +2,21 @@
 
 import { useState } from 'react';
 import axios from 'axios';
-import { Upload, FileText, CheckCircle, AlertCircle, Download, Loader2, Camera, Image } from 'lucide-react';
+import {
+  Upload,
+  FileText,
+  CheckCircle,
+  AlertCircle,
+  Download,
+  Loader2,
+  Camera,
+  Image
+} from 'lucide-react';
 
-// ✅ FIXED: Simplified API URL - always uses current domain
 const API_URL = typeof window !== 'undefined' ? window.location.origin : '';
 
 export default function Home() {
-  const [step, setStep] = useState(1); // 1: Upload, 2: Review, 3: Generate, 4: Complete
+  const [step, setStep] = useState(1);
   const [menuFile, setMenuFile] = useState(null);
   const [menuText, setMenuText] = useState('');
   const [extractedData, setExtractedData] = useState(null);
@@ -17,7 +25,6 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Step 1: Upload menu image or paste text
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -48,58 +55,61 @@ export default function Home() {
         throw new Error('Please upload an image or paste menu text');
       }
 
-      // ✅ FIXED: Now calls /api/menu/extract correctly
-      const response = await axios.post(`${API_URL}/api/menu/extract`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      });
+      const response = await axios.post(
+        `${API_URL}/api/menu/extract`,
+        formData,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+      );
 
       setExtractedData(response.data);
       setValidation(response.data.validation);
       setStep(2);
     } catch (err) {
-      const errorMessage = err.response?.data?.error?.message
-        || err.response?.data?.error
-        || err.message
-        || 'Extraction failed';
-      setError(typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage));
+      const errorMessage =
+        err.response?.data?.error?.message ||
+        err.response?.data?.error ||
+        err.message ||
+        'Extraction failed';
+      setError(
+        typeof errorMessage === 'string'
+          ? errorMessage
+          : JSON.stringify(errorMessage)
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  // Step 3: Generate menu with images
   const handleGenerate = async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const response = await axios.post(`${API_URL}/api/menu/generate`, {
-        parsedMenu: extractedData.parsedMenu,
-        menuDate: new Date().toISOString()
-      }, {
-        timeout: 180000 // 3 minutes timeout
-      });
+      const response = await axios.post(
+        `${API_URL}/api/menu/generate`,
+        {
+          parsedMenu: extractedData.parsedMenu,
+          menuDate: new Date().toISOString()
+        },
+        { timeout: 180000 }
+      );
 
       setGeneratedMenu(response.data);
       setStep(3);
     } catch (err) {
-      console.error('Generation error:', err);
-
       let errorMessage;
 
       if (err.response?.data?.error) {
         const backendError = err.response.data.error;
-        errorMessage = typeof backendError === 'string'
-          ? backendError
-          : backendError.message || JSON.stringify(backendError);
+        errorMessage =
+          typeof backendError === 'string'
+            ? backendError
+            : backendError.message || JSON.stringify(backendError);
       } else if (err.code === 'ECONNABORTED') {
-        errorMessage = 'Request timeout - image generation is taking too long. Please try again.';
-      } else if (err.message) {
-        errorMessage = err.message;
+        errorMessage =
+          'Request timeout - image generation is taking too long. Please try again.';
       } else {
-        errorMessage = 'Generation failed';
+        errorMessage = err.message || 'Generation failed';
       }
 
       setError(errorMessage);
@@ -108,14 +118,12 @@ export default function Home() {
     }
   };
 
-  // Download PDF
   const handleDownload = () => {
     if (generatedMenu?.pdf?.downloadUrl) {
       window.open(`${API_URL}${generatedMenu.pdf.downloadUrl}`, '_blank');
     }
   };
 
-  // Reset to start over
   const handleReset = () => {
     setStep(1);
     setMenuFile(null);
@@ -255,7 +263,9 @@ export default function Home() {
             <h2 className="text-2xl font-bold mb-6">Review Extracted Menu</h2>
 
             {/* Validation Status */}
-            <div className={`mb-6 p-4 rounded-lg ${validation.valid ? 'bg-green-50 border border-green-200' : 'bg-yellow-50 border border-yellow-200'
+            <div className={`mb-6 p-4 rounded-lg ${validation.valid
+              ? 'bg-green-50 border border-green-200'
+              : 'bg-yellow-50 border border-yellow-200'
               }`}>
               <div className="flex items-start">
                 {validation.valid ? (
@@ -295,7 +305,13 @@ export default function Home() {
                   <h3 className="font-bold text-lg text-blue-600 mb-2">{section}</h3>
                   <ul className="space-y-1">
                     {data.items.map((item, i) => (
-                      <li key={i} className={`text-sm ${item.type === 'option' ? 'italic text-gray-600' : 'text-gray-800'}`}>
+                      <li
+                        key={i}
+                        className={`text-sm ${item.type === 'option'
+                          ? 'italic text-gray-600'
+                          : 'text-gray-800'
+                          }`}
+                      >
                         {item.type === 'option' ? '→ ' : '• '}{item.text}
                       </li>
                     ))}
@@ -340,7 +356,9 @@ export default function Home() {
               <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
                 <CheckCircle className="w-10 h-10 text-green-600" />
               </div>
-              <h2 className="text-2xl font-bold mb-2">Menu Generated Successfully!</h2>
+              <h2 className="text-2xl font-bold mb-2">
+                Menu Generated Successfully!
+              </h2>
               <p className="text-gray-600 mb-6">
                 Generated in {generatedMenu.generationTime || '0'}s
                 {generatedMenu.images && ` with ${Object.keys(generatedMenu.images).length} images`}
@@ -354,12 +372,15 @@ export default function Home() {
                       <div className="aspect-square bg-gray-100 flex items-center justify-center">
                         {image?.localPath ? (
                           <img
-                            src={`${API_URL}${image.localPath.replace('./cache', '/cache')}`}
+                            src={`${API_URL}${image.localPath}`}
                             alt={image.mealDescription || 'Meal image'}
                             className="w-full h-full object-cover"
                             onError={(e) => {
-                              e.target.style.display = 'none';
-                              e.target.parentElement.innerHTML = '<div class="text-gray-400 text-xs p-4">Image failed to load</div>';
+                              e.currentTarget.style.display = 'none';
+                              const parent = e.currentTarget.parentElement;
+                              if (parent) {
+                                parent.innerHTML = '<div class="text-gray-400 text-xs p-4">Image failed to load</div>';
+                              }
                             }}
                           />
                         ) : (
@@ -370,7 +391,9 @@ export default function Home() {
                       </div>
                       <div className="p-2 bg-gray-50">
                         <p className="text-xs font-semibold capitalize">{key}</p>
-                        <p className="text-xs text-gray-600 truncate">{image?.mealDescription || 'No description'}</p>
+                        <p className="text-xs text-gray-600 truncate">
+                          {image?.mealDescription || 'No description'}
+                        </p>
                         {image?.cached && (
                           <span className="text-xs text-green-600">♻️ Cached</span>
                         )}
@@ -423,7 +446,8 @@ function StepIndicator({ number, active, label }) {
         }`}>
         {number}
       </div>
-      <span className={`text-sm mt-2 ${active ? 'text-blue-600 font-semibold' : 'text-gray-500'}`}>
+      <span className={`text-sm mt-2 ${active ? 'text-blue-600 font-semibold' : 'text-gray-500'
+        }`}>
         {label}
       </span>
     </div>
