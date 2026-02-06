@@ -2,7 +2,6 @@ const fs = require('fs').promises;
 const fsSync = require('fs');
 const path = require('path');
 // ✅ Import centralized paths
-const path = require('path');
 const isVercel = !!process.env.VERCEL;
 const CACHE_DIR = isVercel ? '/tmp/cache' : path.join(__dirname, '../../cache');
 
