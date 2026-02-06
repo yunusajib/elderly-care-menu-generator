@@ -309,7 +309,6 @@ export default function Home() {
               ))}
             </div>
 
-
             {/* Action Buttons */}
             <div className="flex space-x-4">
               <button
@@ -348,39 +347,57 @@ export default function Home() {
               </div>
               <h2 className="text-2xl font-bold mb-2">Menu Generated Successfully!</h2>
               <p className="text-gray-600 mb-6">
-                Generated in {generatedMenu.generationTime}s with {Object.keys(generatedMenu.images).length} images
+                Generated in {generatedMenu.generationTime || '0'}s
+                {generatedMenu.images && ` with ${Object.keys(generatedMenu.images).length} images`}
               </p>
 
               {/* Generated Images Preview */}
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-                {Object.entries(generatedMenu.images).map(([key, image]) => (
-                  <div key={key} className="border rounded-lg overflow-hidden">
-                    <div className="aspect-square bg-gray-100 flex items-center justify-center">
-                      <img
-                        src={`${API_URL}${image.localPath.replace('./cache', '/cache')}`}
-                        alt={image.mealDescription}
-                        className="w-full h-full object-cover"
-                      />
+              {generatedMenu.images && Object.keys(generatedMenu.images).length > 0 && (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+                  {Object.entries(generatedMenu.images).map(([key, image]) => (
+                    <div key={key} className="border rounded-lg overflow-hidden">
+                      <div className="aspect-square bg-gray-100 flex items-center justify-center">
+                        {image?.localPath ? (
+                          <img
+                            src={`${API_URL}${image.localPath.replace('./cache', '/cache')}`}
+                            alt={image.mealDescription || 'Meal image'}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.parentElement.innerHTML = '<div class="text-gray-400 text-xs p-4">Image failed to load</div>';
+                            }}
+                          />
+                        ) : (
+                          <div className="text-gray-400 text-xs p-4 text-center">
+                            Image generation failed
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-2 bg-gray-50">
+                        <p className="text-xs font-semibold capitalize">{key}</p>
+                        <p className="text-xs text-gray-600 truncate">{image?.mealDescription || 'No description'}</p>
+                        {image?.cached && (
+                          <span className="text-xs text-green-600">♻️ Cached</span>
+                        )}
+                        {image?.error && (
+                          <span className="text-xs text-red-600">⚠️ Failed</span>
+                        )}
+                      </div>
                     </div>
-                    <div className="p-2 bg-gray-50">
-                      <p className="text-xs font-semibold capitalize">{key}</p>
-                      <p className="text-xs text-gray-600 truncate">{image.mealDescription}</p>
-                      {image.cached && (
-                        <span className="text-xs text-green-600">♻️ Cached</span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
 
               {/* Download Button */}
-              <button
-                onClick={handleDownload}
-                className="w-full bg-blue-600 text-white py-4 px-6 rounded-lg font-semibold hover:bg-blue-700 flex items-center justify-center text-lg transition mb-4"
-              >
-                <Download className="w-6 h-6 mr-2" />
-                Download Menu PDF
-              </button>
+              {generatedMenu.pdf?.downloadUrl && (
+                <button
+                  onClick={handleDownload}
+                  className="w-full bg-blue-600 text-white py-4 px-6 rounded-lg font-semibold hover:bg-blue-700 flex items-center justify-center text-lg transition mb-4"
+                >
+                  <Download className="w-6 h-6 mr-2" />
+                  Download Menu PDF
+                </button>
+              )}
 
               <button
                 onClick={handleReset}
