@@ -1,12 +1,10 @@
 const OpenAI = require('openai');
 const axios = require('axios');
-const sharp = require('sharp');
 const fs = require('fs').promises;
 const fsSync = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-// ✅ ONLY CHANGE: Import centralized paths
 const { CACHE_DIR } = require('../config/paths');
 
 const openai = new OpenAI({
@@ -256,14 +254,8 @@ async function saveImage(buffer, cacheKey, description) {
     const filename = `${cacheKey}.png`;
     const filepath = path.join(CACHE_DIR, filename);
 
-    // Process and save image
-    await sharp(buffer)
-      .resize(1024, 1024, {
-        fit: 'cover',
-        position: 'center'
-      })
-      .png({ quality: 90 })
-      .toFile(filepath);
+    // Save image directly (no sharp processing)
+    fsSync.writeFileSync(filepath, buffer);
 
     // Save metadata
     const metadataPath = path.join(CACHE_DIR, `${cacheKey}.json`);
