@@ -2,7 +2,9 @@ const express = require('express');
 const router = express.Router();
 const fs = require('fs');
 const path = require('path');
-const { CACHE_DIR, OUTPUT_DIR } = require('../config/paths');
+
+// ✅ Get paths from global
+const { CACHE_DIR, OUTPUT_DIR } = global.PATHS;
 
 /**
  * GET /api/files/cache/:filename
@@ -12,7 +14,6 @@ router.get('/cache/:filename', (req, res) => {
     try {
         const { filename } = req.params;
 
-        // Security: only allow .png files
         if (!filename.endsWith('.png')) {
             return res.status(400).json({ error: 'Invalid file type' });
         }
@@ -23,9 +24,8 @@ router.get('/cache/:filename', (req, res) => {
             return res.status(404).json({ error: 'Image not found' });
         }
 
-        // Serve the image
         res.setHeader('Content-Type', 'image/png');
-        res.setHeader('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
+        res.setHeader('Cache-Control', 'public, max-age=31536000');
 
         const fileStream = fs.createReadStream(filepath);
         fileStream.pipe(res);
@@ -44,7 +44,6 @@ router.get('/outputs/:filename', (req, res) => {
     try {
         const { filename } = req.params;
 
-        // Security: only allow .pdf files
         if (!filename.endsWith('.pdf')) {
             return res.status(400).json({ error: 'Invalid file type' });
         }
@@ -55,7 +54,6 @@ router.get('/outputs/:filename', (req, res) => {
             return res.status(404).json({ error: 'PDF not found' });
         }
 
-        // Serve the PDF
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
 

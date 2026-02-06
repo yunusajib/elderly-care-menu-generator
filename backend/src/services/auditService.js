@@ -3,7 +3,9 @@ const fsSync = require('fs');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 // ✅ Import centralized paths
-const { LOG_DIR } = require('../config/paths');
+const path = require('path');
+const isVercel = !!process.env.VERCEL;
+const CACHE_DIR = isVercel ? '/tmp/cache' : path.join(__dirname, '../../cache');
 
 const AUDIT_LOG_FILE = path.join(LOG_DIR, 'audit.json');
 

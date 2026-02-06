@@ -3,8 +3,9 @@ const fs = require('fs');
 const fsSync = require('fs');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
-const { OUTPUT_DIR } = require('../config/paths');
-
+const path = require('path');
+const isVercel = !!process.env.VERCEL;
+const CACHE_DIR = isVercel ? '/tmp/cache' : path.join(__dirname, '../../cache');
 // Ensure output directory exists
 if (!fsSync.existsSync(OUTPUT_DIR)) {
   fsSync.mkdirSync(OUTPUT_DIR, { recursive: true });

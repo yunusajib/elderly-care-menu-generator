@@ -6,7 +6,9 @@ const path = require('path');
 const crypto = require('crypto');
 
 // ✅ Import centralized paths
-const { CACHE_DIR } = require('../config/paths');
+const path = require('path');
+const isVercel = !!process.env.VERCEL;
+const CACHE_DIR = isVercel ? '/tmp/cache' : path.join(__dirname, '../../cache');
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
