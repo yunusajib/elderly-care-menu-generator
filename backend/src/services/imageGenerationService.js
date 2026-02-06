@@ -2,7 +2,6 @@ const OpenAI = require('openai');
 const axios = require('axios');
 const fs = require('fs').promises;
 const fsSync = require('fs');
-const path = require('path');
 const crypto = require('crypto');
 
 // ✅ Import centralized paths
