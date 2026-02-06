@@ -1,7 +1,9 @@
 const path = require('path');
 
+// Determine if running on Vercel
 const isVercel = !!process.env.VERCEL;
 
+// Set up directory paths
 const UPLOAD_DIR = isVercel
     ? '/tmp/uploads'
     : path.join(__dirname, '../../uploads');
