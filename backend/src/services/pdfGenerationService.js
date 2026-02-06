@@ -1,12 +1,11 @@
 const PDFDocument = require('pdfkit');
-const fs = require('fs').promises;
 const fsSync = require('fs');
+const fs = fsSync.promises;
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 
-const isVercel = !!process.env.VERCEL;
+const isVercel = Boolean(process.env.VERCEL);
 
-// Define output directory properly
 const OUTPUT_DIR = isVercel
   ? '/tmp/pdf'
   : path.join(__dirname, '../../pdf');
@@ -15,7 +14,6 @@ const OUTPUT_DIR = isVercel
 if (!fsSync.existsSync(OUTPUT_DIR)) {
   fsSync.mkdirSync(OUTPUT_DIR, { recursive: true });
 }
-
 
 /**
  * Generate PDF from menu data and images
