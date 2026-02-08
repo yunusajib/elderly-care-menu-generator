@@ -1,14 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const fs = require('fs');
-const path = require('path');
+const nodePath = require('path');
 
 // ✅ Get paths from global
 const { CACHE_DIR, OUTPUT_DIR } = global.PATHS;
 
 /**
  * GET /api/files/cache/:filename
- * Serve cached images
  */
 router.get('/cache/:filename', (req, res) => {
     try {
@@ -18,27 +17,21 @@ router.get('/cache/:filename', (req, res) => {
             return res.status(400).json({ error: 'Invalid file type' });
         }
 
-        const filepath = path.join(CACHE_DIR, filename);
+        const filepath = nodePath.join(CACHE_DIR, filename);
 
         if (!fs.existsSync(filepath)) {
             return res.status(404).json({ error: 'Image not found' });
         }
 
         res.setHeader('Content-Type', 'image/png');
-        res.setHeader('Cache-Control', 'public, max-age=31536000');
-
-        const fileStream = fs.createReadStream(filepath);
-        fileStream.pipe(res);
-
-    } catch (error) {
-        console.error('Error serving cache file:', error);
+        fs.createReadStream(filepath).pipe(res);
+    } catch (err) {
         res.status(500).json({ error: 'Failed to serve file' });
     }
 });
 
 /**
  * GET /api/files/outputs/:filename
- * Serve generated PDFs
  */
 router.get('/outputs/:filename', (req, res) => {
     try {
@@ -48,7 +41,7 @@ router.get('/outputs/:filename', (req, res) => {
             return res.status(400).json({ error: 'Invalid file type' });
         }
 
-        const filepath = path.join(OUTPUT_DIR, filename);
+        const filepath = nodePath.join(OUTPUT_DIR, filename);
 
         if (!fs.existsSync(filepath)) {
             return res.status(404).json({ error: 'PDF not found' });
@@ -56,12 +49,8 @@ router.get('/outputs/:filename', (req, res) => {
 
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-
-        const fileStream = fs.createReadStream(filepath);
-        fileStream.pipe(res);
-
-    } catch (error) {
-        console.error('Error serving output file:', error);
+        fs.createReadStream(filepath).pipe(res);
+    } catch (err) {
         res.status(500).json({ error: 'Failed to serve file' });
     }
 });

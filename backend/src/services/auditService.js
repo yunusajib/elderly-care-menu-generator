@@ -1,13 +1,20 @@
 const fs = require('fs').promises;
 const fsSync = require('fs');
-const path = require('path');
+const nodePath = require('path');          // ✅ only once
 const { v4: uuidv4 } = require('uuid');
-// ✅ Import centralized paths
-const path = require('path');
-const isVercel = !!process.env.VERCEL;
-const CACHE_DIR = isVercel ? '/tmp/cache' : path.join(__dirname, '../../cache');
 
-const AUDIT_LOG_FILE = path.join(LOG_DIR, 'audit.json');
+const isVercel = Boolean(process.env.VERCEL);
+
+const CACHE_DIR = isVercel
+  ? '/tmp/cache'
+  : nodePath.join(__dirname, '../../cache');
+
+const LOG_DIR = isVercel
+  ? '/tmp/logs'
+  : nodePath.join(__dirname, '../../logs');
+
+const AUDIT_LOG_FILE = nodePath.join(LOG_DIR, 'audit.json');
+
 
 /**
  * Initialize audit log file

@@ -4,10 +4,14 @@ const fs = require('fs').promises;
 const fsSync = require('fs');
 const crypto = require('crypto');
 
-// ✅ Import centralized paths
-const path = require('path');
-const isVercel = !!process.env.VERCEL;
-const CACHE_DIR = isVercel ? '/tmp/cache' : path.join(__dirname, '../../cache');
+// ✅ Import centralized paths (Vercel-safe)
+const nodePath = require('path');
+const isVercel = Boolean(process.env.VERCEL);
+
+const CACHE_DIR = isVercel
+  ? '/tmp/cache'
+  : nodePath.join(__dirname, '../../cache');
+
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
