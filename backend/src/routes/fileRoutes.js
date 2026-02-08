@@ -4,7 +4,17 @@ const fs = require('fs');
 const nodePath = require('path');
 
 // ✅ Get paths from global
-const { CACHE_DIR, OUTPUT_DIR } = global.PATHS;
+const nodePath = require('path');
+const isVercel = Boolean(process.env.VERCEL);
+
+const CACHE_DIR = isVercel
+    ? '/tmp/cache'
+    : nodePath.join(__dirname, '../../cache');
+
+const OUTPUT_DIR = isVercel
+    ? '/tmp/pdf'
+    : nodePath.join(__dirname, '../../pdf');
+
 
 /**
  * GET /api/files/cache/:filename
