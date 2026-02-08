@@ -1,18 +1,19 @@
 const PDFDocument = require('pdfkit');
 const fsSync = require('fs');
 const fs = fsSync.promises;
-const nodePath = require('path');   // 👈 renamed
+const nodePath = require('path');   // ✅ only declaration
 const { v4: uuidv4 } = require('uuid');
 const isVercel = Boolean(process.env.VERCEL);
 
 const OUTPUT_DIR = isVercel
   ? '/tmp/pdf'
-  : nodePath.join(__dirname, '../../pdf');  // 👈 updated
+  : nodePath.join(__dirname, '../../pdf');
 
 // Ensure output directory exists
 if (!fsSync.existsSync(OUTPUT_DIR)) {
   fsSync.mkdirSync(OUTPUT_DIR, { recursive: true });
 }
+
 
 
 /**
