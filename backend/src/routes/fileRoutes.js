@@ -1,10 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const fs = require('fs');
-const nodePath = require('path');
+const nodePath = require('path');  // 👈 declare only once
 
-// ✅ Get paths from global
-const nodePath = require('path');
 const isVercel = Boolean(process.env.VERCEL);
 
 const CACHE_DIR = isVercel
@@ -14,7 +12,6 @@ const CACHE_DIR = isVercel
 const OUTPUT_DIR = isVercel
     ? '/tmp/pdf'
     : nodePath.join(__dirname, '../../pdf');
-
 
 /**
  * GET /api/files/cache/:filename
