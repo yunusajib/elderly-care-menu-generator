@@ -65,7 +65,7 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Serve static files (works locally, not on Vercel serverless)
-app.use('/outputs', express.static(OUTPUT_DIR));
+// app.use('/outputs', express.static(OUTPUT_DIR));
 app.use('/cache', express.static(CACHE_DIR));
 app.use('/uploads', express.static(UPLOAD_DIR));
 

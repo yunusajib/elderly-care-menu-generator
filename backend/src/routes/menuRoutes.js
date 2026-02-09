@@ -4,207 +4,97 @@ const multer = require('multer');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 
-// Import services
+// Services
 const ocrService = require('../services/ocrService');
 const validationService = require('../services/validationService');
 const imageGenerationService = require('../services/imageGenerationService');
 const pdfGenerationService = require('../services/pdfGenerationService');
 const auditService = require('../services/auditService');
 
-// ✅ FIXED: Configure multer to use app.locals directories
+// Multer config (still OK for OCR uploads)
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    // Use the directory set in server.js via app.locals
-    const uploadDir = req.app.locals.UPLOAD_DIR || './uploads';
-    cb(null, uploadDir);
+    cb(null, req.app.locals.UPLOAD_DIR);
   },
   filename: (req, file, cb) => {
-    const uniqueName = `${uuidv4()}${path.extname(file.originalname)}`;
-    cb(null, uniqueName);
+    cb(null, `${uuidv4()}${path.extname(file.originalname)}`);
   }
 });
 
-const upload = multer({
-  storage: storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
-  fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|gif/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
-
-    if (extname && mimetype) {
-      return cb(null, true);
-    }
-    cb(new Error('Only image files are allowed (JPEG, PNG, GIF)'));
-  }
-});
+const upload = multer({ storage });
 
 /**
  * POST /api/menu/extract
- * Extract menu content from uploaded image or text
  */
 router.post('/extract', upload.single('menuImage'), async (req, res, next) => {
   try {
-    console.log('\n📤 Received menu extraction request');
-    console.log('📁 Upload directory:', req.app.locals.UPLOAD_DIR);
-
     let menuText;
 
     if (req.file) {
-      // Image uploaded - use OCR
-      console.log('📸 Processing uploaded image with GPT-4 Vision...');
-      console.log('📄 File path:', req.file.path);
       menuText = await ocrService.extractMenuFromImage(req.file.path);
     } else if (req.body.menuText) {
-      // Text provided directly
-      console.log('📝 Processing text input...');
       menuText = req.body.menuText;
     } else {
-      return res.status(400).json({
-        error: 'Either menuImage file or menuText is required'
-      });
+      return res.status(400).json({ error: 'menuImage or menuText required' });
     }
 
-    console.log('✓ Menu content extracted');
-
-    // Parse menu structure
     const parsedMenu = validationService.parseMenuStructure(menuText);
-    console.log('✓ Menu structure parsed');
-
-    // Validate menu
     const validation = validationService.validateMenu(parsedMenu);
-    console.log(`✓ Validation complete: ${validation.valid ? 'PASSED' : 'FAILED'}`);
 
     res.json({
       success: true,
       extractedText: menuText,
-      parsedMenu: parsedMenu,
-      validation: validation,
-      uploadedFile: req.file ? {
-        filename: req.file.filename,
-        path: req.file.path,
-        size: req.file.size
-      } : null
+      parsedMenu,
+      validation
     });
-
-  } catch (error) {
-    console.error('❌ Extraction error:', error);
-    next(error);
+  } catch (err) {
+    next(err);
   }
 });
 
 /**
  * POST /api/menu/generate
- * Generate complete menu with images and PDF
+ * ✅ STREAMS PDF DIRECTLY (Vercel-safe)
  */
 router.post('/generate', async (req, res, next) => {
-  const startTime = Date.now();
+  const start = Date.now();
 
   try {
-    console.log('\n🎨 Starting menu generation...');
-
     const { parsedMenu, menuDate } = req.body;
-
     if (!parsedMenu) {
-      return res.status(400).json({
-        error: 'parsedMenu is required'
-      });
+      return res.status(400).json({ error: 'parsedMenu is required' });
     }
 
-    // Step 1: Generate images for all sections
-    console.log('📸 Generating meal images...');
+    // 1. Generate images
     const images = await imageGenerationService.generateAllImages(parsedMenu);
-    console.log(`✓ Generated ${Object.keys(images).length} images`);
 
-    // Step 2: Generate PDF
-    console.log('📄 Generating PDF...');
+    // 2. Generate PDF (buffer-based)
     const pdfResult = await pdfGenerationService.generatePDF({
       menuData: parsedMenu,
-      images: images,
+      images,
       menuDate: menuDate || new Date().toISOString(),
       careHomeName: process.env.CARE_HOME_NAME || 'Chichester Court Care Home'
     });
-    console.log('✓ PDF generated');
 
-    // Step 3: Log to audit trail
-    const auditLog = await auditService.logGeneration({
+    // 3. Audit log (no filesystem path)
+    await auditService.logGeneration({
       menuData: parsedMenu,
-      images: images,
-      pdfPath: pdfResult.path,
-      generationTime: Date.now() - startTime,
-      menuDate: menuDate
-    });
-    console.log('✓ Audit log saved');
-
-    const generationTime = ((Date.now() - startTime) / 1000).toFixed(2);
-    console.log(`\n✅ Menu generation complete in ${generationTime}s`);
-
-    res.json({
-      success: true,
-      pdf: {
-        filename: pdfResult.filename,
-        downloadUrl: `/outputs/${pdfResult.filename}`,
-        path: pdfResult.path,
-        size: pdfResult.size
-      },
-      images: images,
-      auditLog: {
-        id: auditLog.id,
-        timestamp: auditLog.timestamp
-      },
-      generationTime: generationTime
+      images,
+      generationTime: Date.now() - start,
+      menuDate
     });
 
-  } catch (error) {
-    console.error('❌ Generation error:', error);
-    next(error);
-  }
-});
+    // ✅ STREAM PDF
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${pdfResult.filename}"`
+    );
 
-/**
- * POST /api/menu/validate
- * Validate menu structure without generating
- */
-router.post('/validate', async (req, res, next) => {
-  try {
-    const { menuText } = req.body;
+    res.send(pdfResult.buffer);
 
-    if (!menuText) {
-      return res.status(400).json({
-        error: 'menuText is required'
-      });
-    }
-
-    const parsedMenu = validationService.parseMenuStructure(menuText);
-    const validation = validationService.validateMenu(parsedMenu);
-
-    res.json({
-      success: true,
-      parsedMenu: parsedMenu,
-      validation: validation
-    });
-
-  } catch (error) {
-    next(error);
-  }
-});
-
-/**
- * GET /api/menu/history
- * Get generation history
- */
-router.get('/history', async (req, res, next) => {
-  try {
-    const limit = parseInt(req.query.limit) || 10;
-    const history = await auditService.getHistory(limit);
-
-    res.json({
-      success: true,
-      history: history
-    });
-
-  } catch (error) {
-    next(error);
+  } catch (err) {
+    next(err);
   }
 });
 
