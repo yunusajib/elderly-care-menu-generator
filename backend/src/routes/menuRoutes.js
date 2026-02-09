@@ -11,7 +11,7 @@ const imageGenerationService = require('../services/imageGenerationService');
 const pdfGenerationService = require('../services/pdfGenerationService');
 const auditService = require('../services/auditService');
 
-// Multer config (still OK for OCR uploads)
+// Multer config (for OCR uploads)
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, req.app.locals.UPLOAD_DIR);
@@ -25,14 +25,17 @@ const upload = multer({ storage });
 
 /**
  * POST /api/menu/extract
+ * Extract menu content from uploaded image or text
  */
 router.post('/extract', upload.single('menuImage'), async (req, res, next) => {
   try {
     let menuText;
 
     if (req.file) {
+      // OCR for uploaded image
       menuText = await ocrService.extractMenuFromImage(req.file.path);
     } else if (req.body.menuText) {
+      // Text provided directly
       menuText = req.body.menuText;
     } else {
       return res.status(400).json({ error: 'menuImage or menuText required' });
@@ -54,43 +57,44 @@ router.post('/extract', upload.single('menuImage'), async (req, res, next) => {
 
 /**
  * POST /api/menu/generate
- * ✅ STREAMS PDF DIRECTLY (Vercel-safe)
+ * ✅ Streams PDF directly to browser (Vercel-safe)
  */
 router.post('/generate', async (req, res, next) => {
-  const start = Date.now();
+  const startTime = Date.now();
 
   try {
     const { parsedMenu, menuDate } = req.body;
+
     if (!parsedMenu) {
       return res.status(400).json({ error: 'parsedMenu is required' });
     }
 
-    // 1. Generate images
+    // 1️⃣ Generate images for menu
     const images = await imageGenerationService.generateAllImages(parsedMenu);
 
-    // 2. Generate PDF (buffer-based)
+    // 2️⃣ Generate PDF and return buffer instead of writing to disk
     const pdfResult = await pdfGenerationService.generatePDF({
       menuData: parsedMenu,
       images,
       menuDate: menuDate || new Date().toISOString(),
-      careHomeName: process.env.CARE_HOME_NAME || 'Chichester Court Care Home'
+      careHomeName: process.env.CARE_HOME_NAME || 'Chichester Court Care Home',
+      returnBuffer: true // ✅ new flag to get buffer instead of file path
     });
 
-    // 3. Audit log (no filesystem path)
+    // 3️⃣ Log audit
     await auditService.logGeneration({
       menuData: parsedMenu,
       images,
-      generationTime: Date.now() - start,
+      generationTime: Date.now() - startTime,
       menuDate
     });
 
-    // ✅ STREAM PDF
+    // 4️⃣ Stream PDF to client
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader(
       'Content-Disposition',
-      `attachment; filename="${pdfResult.filename}"`
+      `inline; filename="${pdfResult.filename}"`
     );
-
     res.send(pdfResult.buffer);
 
   } catch (err) {
